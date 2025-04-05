@@ -30,5 +30,45 @@ The return value should be like:
 import numpy as np
 
 def apply_geometric_transformations(img: np.ndarray) -> dict:
-    # Your implementation here
-    pass
+    h, w = img.shape
+
+    # 1. Translate: shift right and down by 10 pixels
+    translated = np.zeros_like(img)
+    shift_y, shift_x = 10, 10
+    translated[shift_y:, shift_x:] = img[:h-shift_y, :w-shift_x]
+
+    # 2. Rotate 90 degrees clockwise
+    rotated = np.rot90(img, k=-1)
+
+    # 3. Stretch horizontally (scale width by 1.5)
+    new_w = int(w * 1.5)
+    stretched = np.zeros((h, new_w))
+    for i in range(new_w):
+        orig_x = int(i / 1.5)
+        if orig_x < w:
+            stretched[:, i] = img[:, orig_x]
+
+    # 4. Mirror horizontally (flip along vertical axis)
+    mirrored = img[:, ::-1]
+
+    # 5. Barrel distortion (radial distortion)
+    distorted = np.zeros_like(img)
+    center_y, center_x = h / 2, w / 2
+    for y in range(h):
+        for x in range(w):
+            norm_y = (y - center_y) / h
+            norm_x = (x - center_x) / w
+            r = np.sqrt(norm_x ** 2 + norm_y ** 2)
+            factor = 1 + 0.3 * (r ** 2)  # distortion factor
+            src_y = int(center_y + norm_y / factor * h)
+            src_x = int(center_x + norm_x / factor * w)
+            if 0 <= src_y < h and 0 <= src_x < w:
+                distorted[y, x] = img[src_y, src_x]
+
+    return {
+        "translated": translated,
+        "rotated": rotated,
+        "stretched": stretched,
+        "mirrored": mirrored,
+        "distorted": distorted
+    }
